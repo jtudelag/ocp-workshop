@@ -1,0 +1,46 @@
+apiVersion: build.openshift.io/v1
+kind: BuildConfig
+metadata:
+  annotations:
+    openshift.io/generated-by: OpenShiftNewApp
+  creationTimestamp: null
+  labels:
+    app: cart
+  name: cart
+spec:
+  failedBuildsHistoryLimit: 5
+  nodeSelector: null
+  output:
+    to:
+      kind: ImageStreamTag
+      name: cart:latest
+  postCommit: {}
+  resources: {}
+  runPolicy: Serial
+  source:
+    git: #CHANGEME!!
+      uri: http://gogs-ocp-workshop.apps.madrid-b108.openshiftworkshop.com/user30/cart-service.git
+    type: Git
+  strategy:
+    sourceStrategy:
+      env:
+      - name: MAVEN_MIRROR_URL
+        value: http://nexus-ocp-workshop.apps.madrid-b108.openshiftworkshop.com/repository/maven-all-public
+      from:
+        kind: ImageStreamTag
+        name: java:8
+        namespace: openshift
+    type: Source
+  successfulBuildsHistoryLimit: 5
+  triggers:
+  - github:
+      secret: -N-A1nLnNXEe151h2lIf
+    type: GitHub
+  - generic:
+      secret: V5PCn0OCiGXwZo4JQYns
+    type: Generic
+  - type: ConfigChange
+  - imageChange: {}
+    type: ImageChange
+status:
+  lastVersion: 0

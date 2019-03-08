@@ -1,0 +1,78 @@
+apiVersion: v1
+kind: BuildConfig
+metadata:
+  name: cart-pipeline
+spec:
+  strategy:
+    jenkinsPipelineStrategy:
+      jenkinsfile: |-
+        openshift.withCluster() {
+          env.APP_NAME="cart"
+          #CHANGE-ME 
+          env.DEV_NAMESPACE = "dev-XX"
+          #CHANGE-ME 
+          env.PROD_NAMESPACE = "prod-XX"
+          echo "Starting Pipeline for ${APP_NAME}..."
+        }
+        pipeline {
+          agent any
+          stages {
+            stage('Build Image') {
+              steps {
+                script {
+                  openshift.withCluster() {
+                    openshift.withProject( "${DEV_NAMESPACE}" ) {
+                      openshift.startBuild( "${APP_NAME}" ).logs('-f')
+                    }
+                  }
+                }
+              }
+            }
+            stage('Deploy & Verify in DEV') {
+              steps {
+                script {
+                  openshift.withCluster() {
+                    openshift.withProject( "${DEV_NAMESPACE}" ) {
+                      dc = openshift.selector("dc", "${APP_NAME}")
+                      dc.rollout().latest()
+                      timeout(10) {
+                          dc.rollout().status("-w")
+                      }
+                    }
+                  }
+                }
+              }
+            }
+            stage('Run Testin DEV') {
+              steps {
+                 echo 'Running Dummy tests in DEV!!!'
+              }
+            }
+            stage('Promote App to PROD') {
+              steps {
+                 script {
+                        openshift.withProject( "${DEV_NAMESPACE}" ) {
+                            echo "Promoting to ${PROD_NAMESPACE}"
+                            openshift.tag("${APP_NAME}:latest", "${PROD_NAMESPACE}/${APP_NAME}:prod")
+                  }
+                }
+              }
+            }
+            stage('Deploy & Verify in PROS') {
+              steps {
+                script {
+                  openshift.withCluster() {
+                    openshift.withProject( "${PROD_NAMESPACE}" ) {
+                      dc = openshift.selector("dc", "${APP_NAME}")
+                      dc.rollout().latest()
+                      timeout(10) {
+                          dc.rollout().status("-w")
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+    type: JenkinsPipeline
